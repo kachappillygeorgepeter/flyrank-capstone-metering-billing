@@ -1,0 +1,8 @@
+project: LLM-Metering-Billing
+version: "1.0"
+phase: 1
+stack:
+  backend: FastAPI
+  database: PostgreSQL 16
+  payments: Stripe
+  language: Python 3.11+
