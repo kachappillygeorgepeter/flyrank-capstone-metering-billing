@@ -40,10 +40,10 @@
 
 ### Part 2 — Usage Metering (Idempotency)
 
-- [ ] POST /generate built
-- [ ] MeterService built
-- [ ] Idempotency key logic implemented
-- [ ] Duplicate prevention verified
+- [x] POST /generate built
+- [x] MeterService built
+- [x] Idempotency key logic implemented
+- [x] Duplicate prevention verified
 
 ### Part 3 — Quota Enforcement
 
