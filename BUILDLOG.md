@@ -29,25 +29,67 @@
 - [x] Metering flow designed
 - [x] API_CONTRACT.md created
 
-## Phase 2 — Core Billing Logic 🔲
+## Phase 2 — Core Billing Logic ✅
 
-### Part 1 — Project Base & Database Connection
+### Part 1 — Project Base & Database Connection ✅
 
-- [ ] FastAPI app entry point created
-- [ ] FastAPI connected to PostgreSQL
-- [ ] .env configured for secrets
-- [ ] DB models/query layer created
+- [x] FastAPI app entry point created
+- [x] FastAPI connected to PostgreSQL
+- [x] .env configured for secrets
+- [x] DB models/query layer created
 
-### Part 2 — Usage Metering (Idempotency)
+### Part 2 — Usage Metering (Idempotency) ✅
 
-- [ ] POST /generate built
-- [ ] MeterService built
-- [ ] Idempotency key logic implemented
-- [ ] Duplicate prevention verified
+- [x] POST /generate built
+- [x] MeterService built
+- [x] Idempotency key logic implemented
+- [x] Duplicate prevention verified
 
-### Part 3 — Quota Enforcement
+### Part 3 — Quota Enforcement ✅
 
-- [ ] Quota check logic built
-- [ ] 429 response implemented
-- [ ] 402 response implemented
-- [ ] Error messages verified
+- [x] Quota check logic built
+- [x] 429 response implemented
+- [x] 402 response implemented
+- [x] Error messages verified
+
+## Phase 3 — Stripe Integration 🔲
+
+### Part 1 — Stripe Account & Checkout Flow
+
+- [ ] Stripe account created
+- [ ] Stripe CLI installed
+- [ ] Checkout session built
+- [ ] Test payment verified
+
+### Part 2 — Webhook Handler
+
+- [ ] POST /webhooks/stripe built
+- [ ] Signature verification working
+- [ ] Events handled
+
+### Part 3 — Webhook Deduplication & Plan Sync
+
+- [ ] Duplicate webhook prevention
+- [ ] Tenant plan updated from webhook
+- [ ] Full flow tested
+
+## Phase 4 — Cost Calculation & Finalization 🔲
+
+### Part 1 — Cost Calculation Engine
+
+- [ ] Pricing config built
+- [ ] Token pricing rules implemented
+- [ ] GET /usage endpoint built
+
+### Part 2 — Full Test Suite & Documentation
+
+- [ ] All tests written
+- [ ] EVIDENCE.md filled
+- [ ] README.md finalized
+
+## Phase 5 — Demo Prep 🔲
+
+### Part 1 — Seed Data & Demo Rehearsal
+
+- [ ] Tenant seeded near quota limit
+- [ ] Full demo flow rehearsed

@@ -1,0 +1,35 @@
+# Evidence — Definition of Done
+
+## Phase 1 ✅
+
+- Database schema created and verified in pgAdmin 4
+- All 4 tables exist: tenants, plans, subscriptions, usage_events
+- Plans seeded: free (100k tokens, $0) and pro (10M tokens, $99)
+- API contract documented in API_CONTRACT.md
+
+## Phase 2 ✅
+
+### Idempotency
+
+- Sent same request twice with idempotency_key: "req-001"
+- First request → 200, duplicate: false, usage recorded
+- Second request → 200, duplicate: true, no new row in DB
+- SELECT \* FROM usage_events confirms only ONE row
+
+### Quota Enforcement
+
+- Normal request → 200 with quota info in response
+- Inserted fake usage event pushing tenant over 100k limit
+- Next request → 429 with clear error message and upgrade hint
+- Cleaned up fake event after test
+
+### API Key Validation
+
+- Request with valid key → 200
+- Request with invalid key → 401 Unauthorized
+
+## Phase 3 🔲
+
+## Phase 4 🔲
+
+## Phase 5 🔲
