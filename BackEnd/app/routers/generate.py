@@ -41,7 +41,7 @@ def generate(
     tenant_id = tenant[0]
     tenant_name = tenant[1]
 
-    # Record usage via MeterService
+    # MeterService handles: Quota Check → Idempotency → Record Usage
     meter = MeterService(conn)
     result = meter.record(
         tenant_id=tenant_id,
