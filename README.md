@@ -15,17 +15,24 @@ Tracks token usage, enforces quotas, and handles payments via Stripe.
 LLM-Metering-Billing/
 └── BackEnd/
 ├── app/
-│ ├── core/ # DB connection, config
-│ ├── models/ # DB query layer
-│ ├── routers/ # FastAPI route handlers
-│ └── services/ # Business logic
-├── migrations/ # SQL migration files
-├── tests/ # Test suite
-├── API_CONTRACT.md # Full API design doc
-├── BUILDLOG.md # Build progress log
-├── EVIDENCE.md # Definition of Done proof
-├── capstone.yaml # Project metadata
-└── .env.example # Environment variable template
+│ ├── core/
+│ │ ├── config.py # Reads .env secrets
+│ │ └── database.py # PostgreSQL connection
+│ ├── models/
+│ │ └── queries.py # All SQL queries
+│ ├── routers/
+│ │ └── generate.py # POST /generate endpoint
+│ ├── services/
+│ │ └── meter.py # MeterService — billing brain
+│ └── main.py # FastAPI entry point
+├── migrations/
+│ └── 001_initial_schema.sql
+├── tests/ # Test suite (Phase 4)
+├── API_CONTRACT.md
+├── BUILDLOG.md
+├── EVIDENCE.md
+├── capstone.yaml
+└── .env.example
 
 ## Setup Instructions
 
@@ -39,7 +46,7 @@ cd LLM-Metering-Billing/BackEnd
 ### 2. Create virtual environment
 
 ```bash
-python -m venv venv
+py -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
 ```
@@ -47,7 +54,7 @@ pip install -r requirements.txt
 ### 3. Set up environment variables
 
 ```bash
-cp .env.example .env
+copy .env.example .env
 # Fill in your values in .env
 ```
 
@@ -56,31 +63,58 @@ cp .env.example .env
 - Create a PostgreSQL database named `LLM-METERING-BILLING`
 - Run the migration file in pgAdmin 4:
 
-```bash
 migrations/001_initial_schema.sql
+
+### 5. Seed a test tenant
+
+```sql
+INSERT INTO tenants (name, email, api_key)
+VALUES ('Test Company', 'test@example.com', 'test-api-key-123');
+
+INSERT INTO subscriptions (tenant_id, plan_id)
+VALUES (1, 1);
 ```
 
-### 5. Run the server
+### 6. Run the server
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
+### 7. Open Swagger UI
+
+http://localhost:8000/docs
+
 ## API Endpoints
 
-| Method | Endpoint              | Description             |
-| ------ | --------------------- | ----------------------- |
-| POST   | `/generate`           | Billable LLM endpoint   |
-| GET    | `/usage`              | Usage summary + cost    |
-| POST   | `/subscribe/checkout` | Stripe checkout session |
-| POST   | `/webhooks/stripe`    | Stripe webhook handler  |
+| Method | Endpoint              | Description              |
+| ------ | --------------------- | ------------------------ |
+| GET    | `/health`             | Server + DB health check |
+| POST   | `/generate`           | Billable LLM endpoint    |
+| GET    | `/usage`              | Usage summary + cost     |
+| POST   | `/subscribe/checkout` | Stripe checkout session  |
+| POST   | `/webhooks/stripe`    | Stripe webhook handler   |
 
 ## Status Codes
 
-| Code | Meaning          |
-| ---- | ---------------- |
-| 200  | Success          |
-| 400  | Bad Request      |
-| 401  | Unauthorized     |
-| 402  | Payment Required |
-| 429  | Quota Exceeded   |
+| Code | Meaning                           |
+| ---- | --------------------------------- |
+| 200  | Success                           |
+| 400  | Bad Request                       |
+| 401  | Unauthorized — invalid API key    |
+| 402  | Payment Required — no active plan |
+| 429  | Quota Exceeded                    |
+
+## Metering Flow
+
+POST /generate
+↓
+Validate API Key → 401 if invalid
+↓
+Check Quota → 429 if exceeded / 402 if no plan
+↓
+Check Idempotency Key → return cached if duplicate
+↓
+Record Usage Event
+↓
+Return 200 with quota info
