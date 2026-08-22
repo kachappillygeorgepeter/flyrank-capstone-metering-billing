@@ -33,10 +33,10 @@
 
 ### Part 1 — Project Base & Database Connection
 
-- [ ] FastAPI app entry point created
-- [ ] FastAPI connected to PostgreSQL
-- [ ] .env configured for secrets
-- [ ] DB models/query layer created
+- [x] FastAPI app entry point created
+- [x] FastAPI connected to PostgreSQL
+- [x] .env configured for secrets
+- [x] DB models/query layer created
 
 ### Part 2 — Usage Metering (Idempotency)
 
