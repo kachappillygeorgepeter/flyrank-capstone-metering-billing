@@ -117,3 +117,24 @@ def get_tenant_by_metadata(conn, tenant_id: int):
             (tenant_id,)
         )
         return cur.fetchone()
+
+# Check if a Stripe event has already been processed
+def is_webhook_event_processed(conn, stripe_event_id: str) -> bool:
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id FROM processed_webhook_events WHERE stripe_event_id = %s",
+            (stripe_event_id,)
+        )
+        return cur.fetchone() is not None
+
+# Mark a Stripe event as processed to prevent duplicate handling.
+def mark_webhook_event_processed(conn, stripe_event_id: str, event_type: str):
+        cur.execute(
+            """
+            INSERT INTO processed_webhook_events (stripe_event_id, event_type)
+            VALUES (%s, %s)
+            ON CONFLICT (stripe_event_id) DO NOTHING
+            """,
+            (stripe_event_id, event_type)
+        )
+        conn.commit()

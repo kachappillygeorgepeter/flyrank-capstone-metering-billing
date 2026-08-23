@@ -7,7 +7,9 @@ from app.core.config import STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
 from app.core.database import get_connection
 from app.models.queries import (
     update_tenant_subscription,
-    get_tenant_by_metadata
+    get_tenant_by_metadata,
+    is_webhook_event_processed,
+    mark_webhook_event_processed
 )
 
 stripe.api_key = STRIPE_SECRET_KEY
@@ -35,8 +37,17 @@ async def stripe_webhook(request: Request):
     conn = get_connection()
 
     try:
+        event_id = event["id"]
         event_type = event["type"]
         data = event["data"]["object"]
+
+        #  Deduplication Check 
+        if is_webhook_event_processed(conn, event_id):
+            return {
+                "status": "duplicate",
+                "event": event_type,
+                "message": "Event already processed — ignored"
+            }
 
         # Handle checkout.session.completed
         if event_type == "checkout.session.completed":
@@ -54,10 +65,10 @@ async def stripe_webhook(request: Request):
                         status="active"
                     )
 
-        # Handle customer.subscription.updated
+        #  Handle customer.subscription.updated 
         elif event_type == "customer.subscription.updated":
             stripe_subscription_id = data["id"]
-            status = data["status"]  # active, past_due, cancelled etc.
+            status = data["status"]
 
             with conn.cursor() as cur:
                 cur.execute(
@@ -70,12 +81,11 @@ async def stripe_webhook(request: Request):
                 )
                 conn.commit()
 
-        # Handle customer.subscription.deleted
+        #  Handle customer.subscription.deleted 
         elif event_type == "customer.subscription.deleted":
             stripe_subscription_id = data["id"]
 
             with conn.cursor() as cur:
-                # Get plan id for free
                 cur.execute("SELECT id FROM plans WHERE name = 'free'")
                 free_plan = cur.fetchone()
                 if free_plan:
@@ -91,6 +101,9 @@ async def stripe_webhook(request: Request):
                         (free_plan[0], stripe_subscription_id)
                     )
                     conn.commit()
+
+        #  Mark event as processed 
+        mark_webhook_event_processed(conn, event_id, event_type)
 
     finally:
         conn.close()
