@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.core.database import get_connection
-from app.routers import generate, subscribe
+from app.routers import generate, subscribe, webhooks
 
 app = FastAPI(
     title="LLM Metering & Billing Engine",
@@ -10,10 +10,12 @@ app = FastAPI(
 # Register routers
 app.include_router(generate.router)
 app.include_router(subscribe.router)
+app.include_router(webhooks.router)
 
 
 @app.get("/health")
 def health_check():
+    """Quick check that the server and DB are alive."""
     try:
         conn = get_connection()
         conn.close()
