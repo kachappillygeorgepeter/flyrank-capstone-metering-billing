@@ -1,6 +1,6 @@
 project: LLM-Metering-Billing
 version: "1.0"
-phase: 2
+phase: 3
 stack:
   backend: FastAPI
   database: PostgreSQL 16
@@ -9,7 +9,7 @@ stack:
 completed:
   - Phase 1 - Design
   - Phase 2 - Core Billing Logic
-pending:
   - Phase 3 - Stripe Integration
+pending:
   - Phase 4 - Cost Calculation
   - Phase 5 - Demo Prep

@@ -3,6 +3,13 @@
 A production-grade usage metering and billing engine for LLM APIs.
 Tracks token usage, enforces quotas, and handles payments via Stripe.
 
+## Project Documentation
+
+- [Build Log](BackEnd/BUILDLOG.md)
+- [Evidence](BackEnd/EVIDENCE.md)
+- [API Contract](BackEnd/API_CONTRACT.md)
+- [Capstone Config](BackEnd/capstone.yaml)
+
 ## Tech Stack
 
 - **Backend:** FastAPI (Python)
@@ -21,7 +28,9 @@ LLM-Metering-Billing/
 │ ├── models/
 │ │ └── queries.py # All SQL queries
 │ ├── routers/
-│ │ └── generate.py # POST /generate endpoint
+│ │ ├── generate.py # POST /generate endpoint
+│ │ ├── subscribe.py # POST /subscribe/checkout
+│ │ └── webhooks.py # POST /webhooks/stripe
 │ ├── services/
 │ │ └── meter.py # MeterService — billing brain
 │ └── main.py # FastAPI entry point
@@ -81,7 +90,13 @@ VALUES (1, 1);
 uvicorn app.main:app --reload
 ```
 
-### 7. Open Swagger UI
+### 7. Start Stripe CLI (separate terminal)
+
+```bash
+.\stripe listen --forward-to localhost:8000/webhooks/stripe
+```
+
+### 8. Open Swagger UI
 
 http://localhost:8000/docs
 
@@ -100,7 +115,7 @@ http://localhost:8000/docs
 | Code | Meaning                           |
 | ---- | --------------------------------- |
 | 200  | Success                           |
-| 400  | Bad Request                       |
+| 400  | Bad Request — forged webhook      |
 | 401  | Unauthorized — invalid API key    |
 | 402  | Payment Required — no active plan |
 | 429  | Quota Exceeded                    |
@@ -118,3 +133,21 @@ Check Idempotency Key → return cached if duplicate
 Record Usage Event
 ↓
 Return 200 with quota info
+
+## Stripe Flow
+
+POST /subscribe/checkout
+↓
+Create Stripe Checkout Session
+↓
+Tenant pays on Stripe hosted page
+↓
+Stripe fires webhook to /webhooks/stripe
+↓
+Verify signature → 400 if forged
+↓
+Check deduplication → ignore if duplicate
+↓
+Update tenant plan in DB
+↓
+Tenant is now on Pro

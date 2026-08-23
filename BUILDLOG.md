@@ -23,7 +23,7 @@
 
 ### Part 3 — API Contract Design ✅
 
-- [x] All endpoints defined (POST /generate, GET /usage, POST /subscribe/checkout, POST /webhooks/stripe)
+- [x] All endpoints defined
 - [x] Status codes documented for every endpoint
 - [x] Idempotency strategy documented
 - [x] Metering flow designed
@@ -33,45 +33,60 @@
 
 ### Part 1 — Project Base & Database Connection ✅
 
-- [x] FastAPI app entry point created
+- [x] FastAPI app entry point created (main.py)
 - [x] FastAPI connected to PostgreSQL
 - [x] .env configured for secrets
-- [x] DB models/query layer created
+- [x] DB models/query layer created (queries.py)
+- [x] Health check endpoint working
+- [x] Swagger UI accessible at /docs
 
 ### Part 2 — Usage Metering (Idempotency) ✅
 
 - [x] POST /generate built
 - [x] MeterService built
 - [x] Idempotency key logic implemented
-- [x] Duplicate prevention verified
+- [x] Duplicate prevention verified — one row in DB despite two requests
+- [x] API key validation working — 401 on invalid key
 
 ### Part 3 — Quota Enforcement ✅
 
-- [x] Quota check logic built
-- [x] 429 response implemented
-- [x] 402 response implemented
-- [x] Error messages verified
+- [x] check_quota() method built in MeterService
+- [x] 429 Too Many Requests on quota exceeded
+- [x] 402 Payment Required on no active plan
+- [x] Clear error messages with usage details
+- [x] Quota check runs before idempotency check
+- [x] Both tests passed in Swagger UI
 
-## Phase 3 — Stripe Integration 🔲
+## Phase 3 — Stripe Integration ✅
 
-### Part 1 — Stripe Account & Checkout Flow
+### Part 1 — Stripe Account & Checkout Flow ✅
 
-- [ ] Stripe account created
-- [ ] Stripe CLI installed
-- [ ] Checkout session built
-- [ ] Test payment verified
+- [x] Stripe account created in test mode
+- [x] Stripe CLI installed and forwarding webhooks
+- [x] POST /subscribe/checkout built
+- [x] Stripe Checkout Session created successfully
+- [x] Test payment completed with card 4242 4242 4242 4242
+- [x] Redirected to /success page
+- [x] Stripe events firing correctly
 
-### Part 2 — Webhook Handler
+### Part 2 — Webhook Handler ✅
 
-- [ ] POST /webhooks/stripe built
-- [ ] Signature verification working
-- [ ] Events handled
+- [x] POST /webhooks/stripe built
+- [x] Stripe signature verification working
+- [x] checkout.session.completed handled
+- [x] customer.subscription.updated handled
+- [x] customer.subscription.deleted handled
+- [x] Forged webhook returns 400
+- [x] Valid webhook returns 200
 
-### Part 3 — Webhook Deduplication & Plan Sync
+### Part 3 — Webhook Deduplication & Plan Sync ✅
 
-- [ ] Duplicate webhook prevention
-- [ ] Tenant plan updated from webhook
-- [ ] Full flow tested
+- [x] processed_webhook_events table created
+- [x] Duplicate webhook prevention implemented
+- [x] Tenant plan updated from verified webhook events
+- [x] Full flow tested: Checkout → webhook → Free → Pro flip
+- [x] Replay webhook ignored as duplicate
+- [x] Forged webhook rejected with 400
 
 ## Phase 4 — Cost Calculation & Finalization 🔲
 

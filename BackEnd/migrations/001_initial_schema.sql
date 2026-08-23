@@ -51,3 +51,9 @@ CREATE TABLE usage_events (
 INSERT INTO plans (name, token_limit, price_usd)
 VALUES ('free', 100000, 0.00),
     ('pro', 10000000, 99.00);
+CREATE TABLE processed_webhook_events (
+    id SERIAL PRIMARY KEY,
+    stripe_event_id VARCHAR(255) NOT NULL UNIQUE,
+    event_type VARCHAR(255) NOT NULL,
+    processed_at TIMESTAMP DEFAULT NOW()
+);

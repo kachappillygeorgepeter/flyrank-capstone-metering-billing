@@ -67,3 +67,74 @@ def record_usage_event(conn, tenant_id: int, idempotency_key: str,
              output_tokens, reasoning_tokens)
         )
         conn.commit()
+
+# Get tenant by stripe customer id
+def get_tenant_by_stripe_customer_id(conn, stripe_customer_id: str):
+    """Find a tenant by their Stripe customer ID."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT t.id, t.name, t.email
+            FROM tenants t
+            JOIN subscriptions s ON t.id = s.tenant_id
+            WHERE s.stripe_subscription_id = %s
+            """,
+            (stripe_customer_id,)
+        )
+        return cur.fetchone()
+
+# Update tenant subscription
+def update_tenant_subscription(conn, tenant_id: int, plan_name: str, 
+                                stripe_subscription_id: str, status: str):
+    with conn.cursor() as cur:
+        # Get plan id
+        cur.execute("SELECT id FROM plans WHERE name = %s", (plan_name,))
+        plan = cur.fetchone()
+        if not plan:
+            return
+        plan_id = plan[0]
+
+        # Update subscription
+        cur.execute(
+            """
+            UPDATE subscriptions
+            SET plan_id = %s,
+                stripe_subscription_id = %s,
+                status = %s,
+                updated_at = NOW()
+            WHERE tenant_id = %s
+            """,
+            (plan_id, stripe_subscription_id, status, tenant_id)
+        )
+        conn.commit()
+
+
+# Get tenant by metadata
+def get_tenant_by_metadata(conn, tenant_id: int):
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id, name, email FROM tenants WHERE id = %s",
+            (tenant_id,)
+        )
+        return cur.fetchone()
+
+# Check if a Stripe event has already been processed
+def is_webhook_event_processed(conn, stripe_event_id: str) -> bool:
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id FROM processed_webhook_events WHERE stripe_event_id = %s",
+            (stripe_event_id,)
+        )
+        return cur.fetchone() is not None
+
+# Mark a Stripe event as processed to prevent duplicate handling.
+def mark_webhook_event_processed(conn, stripe_event_id: str, event_type: str):
+        cur.execute(
+            """
+            INSERT INTO processed_webhook_events (stripe_event_id, event_type)
+            VALUES (%s, %s)
+            ON CONFLICT (stripe_event_id) DO NOTHING
+            """,
+            (stripe_event_id, event_type)
+        )
+        conn.commit()
