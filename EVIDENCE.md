@@ -28,7 +28,31 @@
 - Request with valid key → 200
 - Request with invalid key → 401 Unauthorized
 
-## Phase 3 🔲
+## Phase 3 ✅
+
+### Stripe Checkout
+
+- POST /subscribe/checkout returns Stripe checkout URL
+- Payment completed with test card 4242 4242 4242 4242
+- Redirected to /success page after payment
+
+### Webhook Handler
+
+- Valid webhook → 200, event processed
+- Forged webhook (no signature) → 400 Bad Request
+- Stripe CLI shows [200] on valid events
+
+### Webhook Deduplication
+
+- processed_webhook_events table stores all processed event IDs
+- Same event replayed → duplicate detected → ignored
+- Only one row per event ID in processed_webhook_events
+
+### Plan Sync
+
+- Tenant was on free plan before checkout
+- After checkout.session.completed webhook → tenant flipped to pro
+- Verified via SELECT on subscriptions table
 
 ## Phase 4 🔲
 
