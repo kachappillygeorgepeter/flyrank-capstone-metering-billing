@@ -54,6 +54,15 @@
 - After checkout.session.completed webhook → tenant flipped to pro
 - Verified via SELECT on subscriptions table
 
-## Phase 4 🔲
+## Phase 4 ✅
+
+### Cost Calculation
+
+- GET /usage returns correct token breakdown
+- Cost math verified:
+  - 100 input tokens × $0.003/1k = $0.0003
+  - 50 output tokens × $0.015/1k = $0.00075
+  - Total = $0.00105 ✅
+- Pricing constants pinned in pricing.py
 
 ## Phase 5 🔲

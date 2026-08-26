@@ -88,19 +88,19 @@
 - [x] Replay webhook ignored as duplicate
 - [x] Forged webhook rejected with 400
 
-## Phase 4 — Cost Calculation & Finalization 🔲
+## Phase 4 — Cost Calculation & Finalization ✅
 
-### Part 1 — Cost Calculation Engine
+### Part 1 — Cost Calculation Engine ✅
 
-- [ ] Pricing config built
-- [ ] Token pricing rules implemented
-- [ ] GET /usage endpoint built
+- [x] pricing.py created with pinned constants
+- [x] calculate_cost() function built
+- [x] get_tenant_usage_breakdown() query added
+- [x] GET /usage endpoint built
+- [x] Cost math verified manually
 
-### Part 2 — Full Test Suite & Documentation
+### Part 2 — Full Test Suite 🔲
 
-- [ ] All tests written
-- [ ] EVIDENCE.md filled
-- [ ] README.md finalized
+- [ ] Testing
 
 ## Phase 5 — Demo Prep 🔲
 

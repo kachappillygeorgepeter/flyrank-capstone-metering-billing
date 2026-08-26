@@ -138,3 +138,22 @@ def mark_webhook_event_processed(conn, stripe_event_id: str, event_type: str):
             (stripe_event_id, event_type)
         )
         conn.commit()
+
+# Get tenant usage breakdown of this month in the format:
+# (input_tokens, cached_tokens, output_tokens, reasoning_tokens)
+def get_tenant_usage_breakdown(conn, tenant_id: int):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT 
+                COALESCE(SUM(input_tokens), 0),
+                COALESCE(SUM(cached_tokens), 0),
+                COALESCE(SUM(output_tokens), 0),
+                COALESCE(SUM(reasoning_tokens), 0)
+            FROM usage_events
+            WHERE tenant_id = %s
+            AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', NOW())
+            """,
+            (tenant_id,)
+        )
+        return cur.fetchone()
