@@ -110,6 +110,15 @@ http://localhost:8000/docs
 | POST   | `/subscribe/checkout` | Stripe checkout session  |
 | POST   | `/webhooks/stripe`    | Stripe webhook handler   |
 
+## Pricing
+
+| Token Type   | Rate per 1k tokens |
+| ------------ | ------------------ |
+| Input        | $0.003             |
+| Cached Input | $0.0003            |
+| Output       | $0.015             |
+| Reasoning    | $0.015             |
+
 ## Status Codes
 
 | Code | Meaning                           |
