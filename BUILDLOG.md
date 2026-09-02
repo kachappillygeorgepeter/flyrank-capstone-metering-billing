@@ -100,11 +100,14 @@
 
 ### Part 2 — Full Test Suite 🔲
 
-- [ ] Testing
+- [ ] Tests to be completed
 
-## Phase 5 — Demo Prep 🔲
+## Phase 5 — Demo Prep ✅
 
-### Part 1 — Seed Data & Demo Rehearsal
+### Part 1 — Seed Data & Demo Rehearsal ✅
 
-- [ ] Tenant seeded near quota limit
-- [ ] Full demo flow rehearsed
+- [x] Demo tenant seeded with 99,800/100,000 tokens used
+- [x] Demo script written and rehearsed
+- [x] All 7 demo scenes documented
+- [x] Pre-demo checklist created
+- [x] Everything pushed to GitHub
