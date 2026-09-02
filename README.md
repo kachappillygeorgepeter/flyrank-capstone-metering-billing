@@ -3,19 +3,19 @@
 A production-grade usage metering and billing engine for LLM APIs.
 Tracks token usage, enforces quotas, and handles payments via Stripe.
 
-## Project Documentation
-
-- [Build Log](BackEnd/BUILDLOG.md)
-- [Evidence](BackEnd/EVIDENCE.md)
-- [API Contract](BackEnd/API_CONTRACT.md)
-- [Capstone Config](BackEnd/capstone.yaml)
-
 ## Tech Stack
 
 - **Backend:** FastAPI (Python)
 - **Database:** PostgreSQL 16
 - **Payments:** Stripe
 - **Testing:** Pytest + HTTPX
+
+## Project Documentation
+
+- [Build Log](BackEnd/BUILDLOG.md)
+- [Evidence](BackEnd/EVIDENCE.md)
+- [API Contract](BackEnd/API_CONTRACT.md)
+- [Capstone Config](BackEnd/capstone.yaml)
 
 ## Project Structure
 
@@ -24,19 +24,22 @@ LLM-Metering-Billing/
 ├── app/
 │ ├── core/
 │ │ ├── config.py # Reads .env secrets
-│ │ └── database.py # PostgreSQL connection
+│ │ ├── database.py # PostgreSQL connection
+│ │ └── pricing.py # Pinned pricing constants
 │ ├── models/
 │ │ └── queries.py # All SQL queries
 │ ├── routers/
 │ │ ├── generate.py # POST /generate endpoint
 │ │ ├── subscribe.py # POST /subscribe/checkout
-│ │ └── webhooks.py # POST /webhooks/stripe
+│ │ ├── webhooks.py # POST /webhooks/stripe
+│ │ └── usage.py # GET /usage endpoint
 │ ├── services/
 │ │ └── meter.py # MeterService — billing brain
 │ └── main.py # FastAPI entry point
 ├── migrations/
 │ └── 001_initial_schema.sql
-├── tests/ # Test suite (Phase 4)
+├── tests/
+│ └── test_metering.py
 ├── API_CONTRACT.md
 ├── BUILDLOG.md
 ├── EVIDENCE.md
@@ -74,14 +77,20 @@ copy .env.example .env
 
 migrations/001_initial_schema.sql
 
-### 5. Seed a test tenant
+### 5. Seed tenants
 
 ```sql
+-- Test tenant
 INSERT INTO tenants (name, email, api_key)
 VALUES ('Test Company', 'test@example.com', 'test-api-key-123');
+INSERT INTO subscriptions (tenant_id, plan_id) VALUES (1, 1);
 
-INSERT INTO subscriptions (tenant_id, plan_id)
-VALUES (1, 1);
+-- Demo tenant (near quota limit)
+INSERT INTO tenants (name, email, api_key)
+VALUES ('Demo Company', 'demo@example.com', 'demo-api-key-456');
+INSERT INTO subscriptions (tenant_id, plan_id) VALUES (2, 1);
+INSERT INTO usage_events (tenant_id, idempotency_key, input_tokens)
+VALUES (2, 'seed-usage-demo', 99800);
 ```
 
 ### 6. Run the server
@@ -128,6 +137,16 @@ http://localhost:8000/docs
 | 401  | Unauthorized — invalid API key    |
 | 402  | Payment Required — no active plan |
 | 429  | Quota Exceeded                    |
+
+## Demo Flow
+
+GET /health → system alive
+GET /usage (demo tenant) → 99,800/100,000 tokens used
+POST /generate (demo tenant) → 429 quota exceeded
+POST /generate x2 (same key) → duplicate: true, one row in DB
+POST /subscribe/checkout → Stripe checkout → Pro plan
+POST /webhooks/stripe (no sig) → 400 forged rejected
+GET /usage (test tenant) → numbers + cost add up
 
 ## Metering Flow
 
