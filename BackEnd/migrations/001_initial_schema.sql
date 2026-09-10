@@ -57,3 +57,7 @@ CREATE TABLE processed_webhook_events (
     event_type VARCHAR(255) NOT NULL,
     processed_at TIMESTAMP DEFAULT NOW()
 );
+ALTER TABLE tenants
+ADD COLUMN password_hash VARCHAR(255);
+ALTER TABLE tenants
+ADD COLUMN role VARCHAR(50) DEFAULT 'tenant';

@@ -129,6 +129,7 @@ def is_webhook_event_processed(conn, stripe_event_id: str) -> bool:
 
 # Mark a Stripe event as processed to prevent duplicate handling.
 def mark_webhook_event_processed(conn, stripe_event_id: str, event_type: str):
+    with conn.cursor() as cur:
         cur.execute(
             """
             INSERT INTO processed_webhook_events (stripe_event_id, event_type)
@@ -153,6 +154,48 @@ def get_tenant_usage_breakdown(conn, tenant_id: int):
             FROM usage_events
             WHERE tenant_id = %s
             AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', NOW())
+            """,
+            (tenant_id,)
+        )
+        return cur.fetchone()
+def get_tenant_by_email(conn, email: str):
+    """Find a tenant by email address."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, name, email, api_key, password_hash, role
+            FROM tenants
+            WHERE email = %s
+            """,
+            (email,)
+        )
+        return cur.fetchone()
+
+
+def create_tenant(conn, name: str, email: str,
+                  api_key: str, password_hash: str, role: str = "tenant"):
+    """Create a new tenant with hashed password."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO tenants (name, email, api_key, password_hash, role)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id, name, email, api_key, role
+            """,
+            (name, email, api_key, password_hash, role)
+        )
+        conn.commit()
+        return cur.fetchone()
+
+
+def get_tenant_by_id(conn, tenant_id: int):
+    """Get tenant by ID."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, name, email, api_key, role
+            FROM tenants
+            WHERE id = %s
             """,
             (tenant_id,)
         )
