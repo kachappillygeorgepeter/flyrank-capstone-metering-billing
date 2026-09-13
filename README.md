@@ -19,6 +19,7 @@ and secures endpoints with JWT authentication and role based access control.
 - [API Contract](BackEnd/API_CONTRACT.md)
 - [Full Project Reference](BackEnd/INFOS.md)
 - [Capstone Config](BackEnd/capstone.yaml)
+- [Information](BackEnd/INFOS.md)
 
 ## Project Structure
 
