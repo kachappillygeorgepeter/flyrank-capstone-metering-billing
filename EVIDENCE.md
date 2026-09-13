@@ -65,4 +65,46 @@
   - Total = $0.00105 ✅
 - Pricing constants pinned in pricing.py
 
-## Phase 5 🔲
+## Phase 5 ✅
+
+### Demo Scenarios Verified
+
+- Scene 1: GET /health → status ok, database connected ✅
+- Scene 2: GET /usage → demo tenant at 99.8% quota ✅
+- Scene 3: POST /generate → 429 quota exceeded ✅
+- Scene 4: Same idempotency key → duplicate: true, one DB row ✅
+- Scene 5: Stripe checkout → tenant flipped Free → Pro ✅
+- Scene 6: Forged webhook → 400 rejected ✅
+- Scene 7: GET /usage → numbers + cost add up perfectly ✅
+
+## Phase 6 ✅
+
+### Registration
+
+- POST /auth/register → 201 Created
+- Password stored as bcrypt hash — never plain text
+- Unique API key auto-generated
+- Duplicate email → 400 Bad Request
+
+### Login
+
+- POST /auth/login → 200 with JWT access token
+- Wrong password → 401 Unauthorized
+- Token contains: tenant id, email, role, expiry
+
+### JWT Protected Endpoints
+
+- GET /usage with JWT → 200, auth_method: jwt ✅
+- GET /usage with API key → 200, auth_method: api_key ✅
+- POST /generate with JWT → 200, auth_method: jwt ✅
+- No auth header → 401 Authentication required ✅
+- Invalid JWT → 401 Invalid or expired token ✅
+
+### Role Based Access Control
+
+- Admin login → JWT with role: admin ✅
+- GET /admin/tenants with admin JWT → 200, all tenants listed ✅
+- GET /admin/usage with admin JWT → 200, all usage + costs ✅
+- GET /admin/stats with admin JWT → 200, system stats ✅
+- GET /admin/tenants with tenant JWT → 403 Forbidden ✅
+- GET /admin/tenants with no token → 401 Unauthorized ✅

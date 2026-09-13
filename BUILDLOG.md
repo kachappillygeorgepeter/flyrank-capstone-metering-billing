@@ -111,3 +111,55 @@
 - [x] All 7 demo scenes documented
 - [x] Pre-demo checklist created
 - [x] Everything pushed to GitHub
+
+## Phase 6 — Authentication & Security ✅
+
+### Part 1 — Theory & Foundation ✅
+
+- [x] Authentication vs Authorization understood
+- [x] JWT structure and signing understood
+- [x] bcrypt password hashing understood
+- [x] Session vs Token based auth understood
+- [x] RBAC concepts understood
+
+### Part 2 — Tenant Login System ✅
+
+- [x] python-jose and passlib installed
+- [x] password_hash column added to tenants
+- [x] role column added to tenants
+- [x] JWT config added to .env
+- [x] app/services/auth.py built
+- [x] Auth queries added to queries.py
+- [x] POST /auth/register built
+- [x] POST /auth/login built
+- [x] GET /auth/me built
+- [x] Registration tested — 201 returned
+- [x] Login tested — JWT returned
+- [x] Wrong password tested — 401 returned
+- [x] Duplicate email tested — 400 returned
+
+### Part 3 — JWT Protected Endpoints ✅
+
+- [x] Flexible auth dependency built — API Key OR JWT
+- [x] GET /usage updated to support JWT
+- [x] POST /generate updated to support JWT
+- [x] POST /subscribe/checkout updated to support JWT
+- [x] auth_method shown in responses
+- [x] JWT auth tested — 200 with auth_method: jwt
+- [x] API key auth tested — 200 with auth_method: api_key
+- [x] No auth tested — 401 returned
+- [x] Invalid JWT tested — 401 returned
+
+### Part 4 — Role Based Access Control ✅
+
+- [x] Admin queries built — get_all_tenants, get_all_usage
+- [x] GET /admin/tenants built — admin only
+- [x] GET /admin/usage built — admin only
+- [x] GET /admin/stats built — admin only
+- [x] Admin router registered in main.py
+- [x] Admin password seeded via bcrypt
+- [x] Admin login tested — JWT with role:admin returned
+- [x] Admin can see all tenants — 200 returned
+- [x] Admin can see all usage — 200 returned
+- [x] Tenant cannot access admin endpoints — 403 returned
+- [x] No token on admin endpoint — 401 returned

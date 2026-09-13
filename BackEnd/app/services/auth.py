@@ -69,3 +69,59 @@ def require_admin(current_tenant=Depends(get_current_tenant)):
             detail="Admin access required"
         )
     return current_tenant
+
+def get_current_tenant_flexible(
+    authorization: str = Header(None, description="Bearer <jwt_token>"),
+    x_api_key: str = Header(None, description="Your tenant API key"),
+    conn=Depends(get_db)
+):
+    """
+    Accepts EITHER:
+    - Authorization: Bearer <jwt_token>
+    - x-api-key: <api_key>
+
+    JWT takes priority if both are provided.
+    """
+    # Try JWT first
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+        payload = decode_access_token(token)
+
+        tenant_id = payload.get("sub")
+        email     = payload.get("email")
+        role      = payload.get("role")
+
+        if not tenant_id:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid token payload"
+            )
+
+        return {
+            "id":       int(tenant_id),
+            "email":    email,
+            "role":     role,
+            "auth_method": "jwt"
+        }
+
+    # Fall back to API key
+    if x_api_key:
+        from app.models.queries import get_tenant_by_api_key
+        tenant = get_tenant_by_api_key(conn, x_api_key)
+        if not tenant:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid API key"
+            )
+        return {
+            "id":       tenant[0],
+            "email":    tenant[2],
+            "role":     "tenant",
+            "auth_method": "api_key"
+        }
+
+    # Neither provided
+    raise HTTPException(
+        status_code=401,
+        detail="Authentication required — provide Bearer token or x-api-key"
+    )

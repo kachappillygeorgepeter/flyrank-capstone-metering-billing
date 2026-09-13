@@ -1,13 +1,15 @@
 # LLM Metering & Billing Engine
 
 A production-grade usage metering and billing engine for LLM APIs.
-Tracks token usage, enforces quotas, and handles payments via Stripe.
+Tracks token usage, enforces quotas, handles payments via Stripe,
+and secures endpoints with JWT authentication and role based access control.
 
 ## Tech Stack
 
 - **Backend:** FastAPI (Python)
 - **Database:** PostgreSQL 16
 - **Payments:** Stripe
+- **Auth:** JWT (python-jose) + bcrypt (passlib)
 - **Testing:** Pytest + HTTPX
 
 ## Project Documentation
@@ -15,6 +17,7 @@ Tracks token usage, enforces quotas, and handles payments via Stripe.
 - [Build Log](BackEnd/BUILDLOG.md)
 - [Evidence](BackEnd/EVIDENCE.md)
 - [API Contract](BackEnd/API_CONTRACT.md)
+- [Full Project Reference](BackEnd/INFOS.md)
 - [Capstone Config](BackEnd/capstone.yaml)
 
 ## Project Structure
@@ -29,11 +32,14 @@ LLM-Metering-Billing/
 │ ├── models/
 │ │ └── queries.py # All SQL queries
 │ ├── routers/
+│ │ ├── auth.py # POST /auth/register, /login, /me
+│ │ ├── admin.py # GET /admin/tenants, /usage, /stats
 │ │ ├── generate.py # POST /generate endpoint
 │ │ ├── subscribe.py # POST /subscribe/checkout
 │ │ ├── webhooks.py # POST /webhooks/stripe
 │ │ └── usage.py # GET /usage endpoint
 │ ├── services/
+│ │ ├── auth.py # JWT + bcrypt + flexible auth
 │ │ └── meter.py # MeterService — billing brain
 │ └── main.py # FastAPI entry point
 ├── migrations/
@@ -43,6 +49,7 @@ LLM-Metering-Billing/
 ├── API_CONTRACT.md
 ├── BUILDLOG.md
 ├── EVIDENCE.md
+├── INFOS.md
 ├── capstone.yaml
 └── .env.example
 
@@ -91,33 +98,83 @@ VALUES ('Demo Company', 'demo@example.com', 'demo-api-key-456');
 INSERT INTO subscriptions (tenant_id, plan_id) VALUES (2, 1);
 INSERT INTO usage_events (tenant_id, idempotency_key, input_tokens)
 VALUES (2, 'seed-usage-demo', 99800);
+
+-- Admin tenant
+INSERT INTO tenants (name, email, api_key, role)
+VALUES ('Admin User', 'admin@example.com', 'admin-api-key-789', 'admin');
+INSERT INTO subscriptions (tenant_id, plan_id) VALUES (3, 2);
 ```
 
-### 6. Run the server
+### 6. Set admin password
+
+```powershell
+py -c "from passlib.context import CryptContext; pwd = CryptContext(schemes=['bcrypt'], deprecated='auto'); print(pwd.hash('adminpassword123'))"
+```
+
+Then in pgAdmin:
+
+```sql
+UPDATE tenants SET password_hash = 'paste_hash_here'
+WHERE email = 'admin@example.com';
+```
+
+### 7. Run the server
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-### 7. Start Stripe CLI (separate terminal)
+### 8. Start Stripe CLI (separate terminal)
 
 ```bash
 .\stripe listen --forward-to localhost:8000/webhooks/stripe
 ```
 
-### 8. Open Swagger UI
+### 9. Open Swagger UI
 
 http://localhost:8000/docs
 
 ## API Endpoints
 
+### Auth (Public)
+
+| Method | Endpoint         | Description       |
+| ------ | ---------------- | ----------------- |
+| POST   | `/auth/register` | Create account    |
+| POST   | `/auth/login`    | Get JWT token     |
+| GET    | `/auth/me`       | Current user info |
+
+### Billing (API Key or JWT)
+
 | Method | Endpoint              | Description              |
 | ------ | --------------------- | ------------------------ |
 | GET    | `/health`             | Server + DB health check |
 | POST   | `/generate`           | Billable LLM endpoint    |
-| GET    | `/usage`              | Usage summary + cost     |
+| GET    | `/usage`              | Own usage summary + cost |
 | POST   | `/subscribe/checkout` | Stripe checkout session  |
 | POST   | `/webhooks/stripe`    | Stripe webhook handler   |
+
+### Admin (JWT + Admin Role Only)
+
+| Method | Endpoint         | Description              |
+| ------ | ---------------- | ------------------------ |
+| GET    | `/admin/tenants` | All tenants list         |
+| GET    | `/admin/usage`   | All tenants usage + cost |
+| GET    | `/admin/stats`   | System wide stats        |
+
+## Authentication Methods
+
+| Method  | Header                          | When to Use        |
+| ------- | ------------------------------- | ------------------ |
+| API Key | `x-api-key: <key>`              | Machine to machine |
+| JWT     | `Authorization: Bearer <token>` | After login        |
+
+## Roles
+
+| Role     | Access                                       |
+| -------- | -------------------------------------------- |
+| `tenant` | Own usage, generate, subscribe               |
+| `admin`  | Everything + all tenants data + system stats |
 
 ## Pricing
 
@@ -128,31 +185,38 @@ http://localhost:8000/docs
 | Output       | $0.015             |
 | Reasoning    | $0.015             |
 
+## Plans & Quotas
+
+| Plan | Token Limit             | Price        |
+| ---- | ----------------------- | ------------ |
+| Free | 100,000 tokens/month    | $0.00        |
+| Pro  | 10,000,000 tokens/month | $99.00/month |
+
 ## Status Codes
 
-| Code | Meaning                           |
-| ---- | --------------------------------- |
-| 200  | Success                           |
-| 400  | Bad Request — forged webhook      |
-| 401  | Unauthorized — invalid API key    |
-| 402  | Payment Required — no active plan |
-| 429  | Quota Exceeded                    |
+| Code | Meaning                |
+| ---- | ---------------------- |
+| 200  | Success                |
+| 201  | Created                |
+| 400  | Bad Request            |
+| 401  | Unauthorized           |
+| 402  | Payment Required       |
+| 403  | Forbidden — wrong role |
+| 422  | Unprocessable Entity   |
+| 429  | Quota Exceeded         |
 
-## Demo Flow
+## Auth Flow
 
-GET /health → system alive
-GET /usage (demo tenant) → 99,800/100,000 tokens used
-POST /generate (demo tenant) → 429 quota exceeded
-POST /generate x2 (same key) → duplicate: true, one row in DB
-POST /subscribe/checkout → Stripe checkout → Pro plan
-POST /webhooks/stripe (no sig) → 400 forged rejected
-GET /usage (test tenant) → numbers + cost add up
+Register → POST /auth/register → 201 + tenant info
+Login → POST /auth/login → 200 + JWT token
+Use JWT → Authorization: Bearer <token> on any endpoint
+Admin → JWT with role:admin → access /admin/\* endpoints
 
 ## Metering Flow
 
 POST /generate
 ↓
-Validate API Key → 401 if invalid
+Auth — API Key or JWT → 401 if invalid
 ↓
 Check Quota → 429 if exceeded / 402 if no plan
 ↓
@@ -176,6 +240,4 @@ Verify signature → 400 if forged
 ↓
 Check deduplication → ignore if duplicate
 ↓
-Update tenant plan in DB
-↓
-Tenant is now on Pro
+Update tenant plan in DB → Pro ✅
