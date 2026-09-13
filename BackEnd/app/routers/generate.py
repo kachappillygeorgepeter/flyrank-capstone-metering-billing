@@ -1,10 +1,10 @@
 # Dummy billable endpoint for testing purposes
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-
 from app.core.database import get_db
-from app.models.queries import get_tenant_by_api_key
+from app.models.queries import get_tenant_plan
+from app.services.auth import get_current_tenant_flexible
 from app.services.meter import MeterService
 
 router = APIRouter()
@@ -20,29 +20,18 @@ class GenerateRequest(BaseModel):
     prompt: str = "Hello"
 
 
-# API Key Dependency
-def get_tenant(
-    x_api_key: str = Header(..., description="Your tenant API key"),
-    conn=Depends(get_db)):
-    tenant = get_tenant_by_api_key(conn, x_api_key)
-    if not tenant:
-        raise HTTPException(status_code=401, detail="Invalid API key")
-    return tenant, conn
-
-
 # Route
 @router.post("/generate")
 def generate(
     body: GenerateRequest,
-    tenant_conn=Depends(get_tenant)
+    current_tenant=Depends(get_current_tenant_flexible),
+    conn=Depends(get_db)
 ):
-    tenant, conn = tenant_conn
-
-    tenant_id = tenant[0]
-    tenant_name = tenant[1]
+    tenant_id   = current_tenant["id"]
+    tenant_name = current_tenant.get("email", "Unknown")
 
     # MeterService handles: Quota Check → Idempotency → Record Usage
-    meter = MeterService(conn)
+    meter  = MeterService(conn)
     result = meter.record(
         tenant_id=tenant_id,
         idempotency_key=body.idempotency_key,
@@ -53,14 +42,15 @@ def generate(
     )
 
     return {
-        "tenant": tenant_name,
-        "prompt": body.prompt,
+        "tenant":   tenant_name,
+        "prompt":   body.prompt,
         "response": f"Generated response for: {body.prompt}",
         "tokens": {
-            "input": body.input_tokens,
-            "cached": body.cached_tokens,
-            "output": body.output_tokens,
+            "input":     body.input_tokens,
+            "cached":    body.cached_tokens,
+            "output":    body.output_tokens,
             "reasoning": body.reasoning_tokens
         },
-        "metering": result
+        "auth_method": current_tenant["auth_method"],
+        "metering":    result
     }

@@ -1,10 +1,11 @@
 project: LLM-Metering-Billing
 version: "1.0"
-phase: 5
+phase: 6
 stack:
   backend: FastAPI
   database: PostgreSQL 16
   payments: Stripe
+  auth: JWT + bcrypt + RBAC
   language: Python 3.13
 completed:
   - Phase 1 - Design
@@ -12,5 +13,4 @@ completed:
   - Phase 3 - Stripe Integration
   - Phase 4 - Cost Calculation & Finalization
   - Phase 5 - Demo Prep
-pending: []
-status: COMPLETE
+  - Phase 6 - Authentication & Security

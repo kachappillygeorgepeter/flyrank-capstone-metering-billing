@@ -1,12 +1,15 @@
 from fastapi import FastAPI
 from app.core.database import get_connection
-from app.routers import generate, subscribe, webhooks, usage
+from app.routers import generate, subscribe, webhooks, usage, auth, admin
 
 app = FastAPI(
     title="LLM Metering & Billing Engine",
     version="1.0.0"
 )
 
+# Register routers
+app.include_router(auth.router)
+app.include_router(admin.router)
 app.include_router(generate.router)
 app.include_router(subscribe.router)
 app.include_router(webhooks.router)

@@ -129,6 +129,7 @@ def is_webhook_event_processed(conn, stripe_event_id: str) -> bool:
 
 # Mark a Stripe event as processed to prevent duplicate handling.
 def mark_webhook_event_processed(conn, stripe_event_id: str, event_type: str):
+    with conn.cursor() as cur:
         cur.execute(
             """
             INSERT INTO processed_webhook_events (stripe_event_id, event_type)
@@ -157,3 +158,91 @@ def get_tenant_usage_breakdown(conn, tenant_id: int):
             (tenant_id,)
         )
         return cur.fetchone()
+def get_tenant_by_email(conn, email: str):
+    """Find a tenant by email address."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, name, email, api_key, password_hash, role
+            FROM tenants
+            WHERE email = %s
+            """,
+            (email,)
+        )
+        return cur.fetchone()
+
+
+def create_tenant(conn, name: str, email: str,
+                  api_key: str, password_hash: str, role: str = "tenant"):
+    """Create a new tenant with hashed password."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO tenants (name, email, api_key, password_hash, role)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id, name, email, api_key, role
+            """,
+            (name, email, api_key, password_hash, role)
+        )
+        conn.commit()
+        return cur.fetchone()
+
+
+def get_tenant_by_id(conn, tenant_id: int):
+    """Get tenant by ID."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, name, email, api_key, role
+            FROM tenants
+            WHERE id = %s
+            """,
+            (tenant_id,)
+        )
+        return cur.fetchone()
+def get_all_tenants(conn):
+    """Get all tenants — admin only."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT t.id, t.name, t.email, t.role,
+                   p.name as plan, s.status,
+                   t.created_at
+            FROM tenants t
+            JOIN subscriptions s ON t.id = s.tenant_id
+            JOIN plans p ON s.plan_id = p.id
+            ORDER BY t.created_at DESC
+            """
+        )
+        return cur.fetchall()
+
+
+def get_all_usage(conn):
+    """Get usage summary for all tenants — admin only."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                t.id,
+                t.name,
+                t.email,
+                p.name as plan,
+                p.token_limit,
+                COALESCE(SUM(
+                    u.input_tokens + u.cached_tokens +
+                    u.output_tokens + u.reasoning_tokens
+                ), 0) as total_tokens,
+                COALESCE(SUM(u.input_tokens), 0) as input_tokens,
+                COALESCE(SUM(u.cached_tokens), 0) as cached_tokens,
+                COALESCE(SUM(u.output_tokens), 0) as output_tokens,
+                COALESCE(SUM(u.reasoning_tokens), 0) as reasoning_tokens
+            FROM tenants t
+            JOIN subscriptions s ON t.id = s.tenant_id
+            JOIN plans p ON s.plan_id = p.id
+            LEFT JOIN usage_events u ON t.id = u.tenant_id
+            AND DATE_TRUNC('month', u.created_at) = DATE_TRUNC('month', NOW())
+            GROUP BY t.id, t.name, t.email, p.name, p.token_limit
+            ORDER BY total_tokens DESC
+            """
+        )
+        return cur.fetchall()

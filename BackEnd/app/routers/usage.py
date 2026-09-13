@@ -1,31 +1,27 @@
-# GET /usage — Returns tenant usage summary
-from fastapi import APIRouter, Depends, Header, HTTPException
+# GET /usage — Returns tenant usage summary and cost rollup
+
+from fastapi import APIRouter, Depends
 from app.core.database import get_db
 from app.core.pricing import calculate_cost
 from app.models.queries import (
-    get_tenant_by_api_key,
     get_tenant_plan,
     get_tenant_usage_breakdown
 )
+from app.services.auth import get_current_tenant_flexible
+from fastapi import HTTPException
 
 router = APIRouter()
 
-# API Key Dependency
-def get_tenant(
-    x_api_key: str = Header(..., description="Your tenant API key"),
-    conn=Depends(get_db)):
-    tenant = get_tenant_by_api_key(conn, x_api_key)
-    if not tenant:
-        raise HTTPException(status_code=401, detail="Invalid API key")
-    return tenant, conn
-
 
 @router.get("/usage")
-def get_usage(tenant_conn=Depends(get_tenant)):
-    tenant, conn = tenant_conn
-    tenant_id = tenant[0]
-    tenant_name = tenant[1]
-    # Get tenant plan
+def get_usage(
+    current_tenant=Depends(get_current_tenant_flexible),
+    conn=Depends(get_db)
+):
+    tenant_id   = current_tenant["id"]
+    tenant_name = current_tenant.get("email", "Unknown")
+
+    # Get plan info
     plan = get_tenant_plan(conn, tenant_id)
     if not plan:
         raise HTTPException(
@@ -33,19 +29,19 @@ def get_usage(tenant_conn=Depends(get_tenant)):
             detail="No active plan found"
         )
 
-    plan_name = plan[0]
+    plan_name   = plan[0]
     token_limit = plan[1]
 
     # Get token breakdown
-    breakdown = get_tenant_usage_breakdown(conn, tenant_id)
-    input_tokens    = breakdown[0]
-    cached_tokens   = breakdown[1]
-    output_tokens   = breakdown[2]
+    breakdown        = get_tenant_usage_breakdown(conn, tenant_id)
+    input_tokens     = breakdown[0]
+    cached_tokens    = breakdown[1]
+    output_tokens    = breakdown[2]
     reasoning_tokens = breakdown[3]
 
     # Calculate totals
     total_used = input_tokens + cached_tokens + output_tokens + reasoning_tokens
-    remaining = max(0, token_limit - total_used)
+    remaining  = max(0, token_limit - total_used)
 
     # Calculate cost
     cost_usd = calculate_cost(
@@ -56,18 +52,19 @@ def get_usage(tenant_conn=Depends(get_tenant)):
     )
 
     return {
-        "tenant": tenant_name,
-        "plan": plan_name,
+        "tenant":    tenant_name,
+        "plan":      plan_name,
+        "auth_method": current_tenant["auth_method"],
         "usage": {
-            "used_tokens": total_used,
-            "limit": token_limit,
-            "remaining": remaining,
-            "percentage_used": round((total_used / token_limit) * 100, 2)
+            "used_tokens":      total_used,
+            "limit":            token_limit,
+            "remaining":        remaining,
+            "percentage_used":  round((total_used / token_limit) * 100, 2)
         },
         "breakdown": {
-            "input_tokens": input_tokens,
-            "cached_tokens": cached_tokens,
-            "output_tokens": output_tokens,
+            "input_tokens":     input_tokens,
+            "cached_tokens":    cached_tokens,
+            "output_tokens":    output_tokens,
             "reasoning_tokens": reasoning_tokens
         },
         "cost_usd": cost_usd
